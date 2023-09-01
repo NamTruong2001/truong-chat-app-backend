@@ -1,0 +1,11 @@
+uvicorn[standard]
+PyJWT
+fastapi
+websockets
+pydantic
+sqlalchemy
+requests
+openai
+mysql-connector-python
+Pillow
+alembic
