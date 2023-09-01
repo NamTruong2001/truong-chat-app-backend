@@ -27,13 +27,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# VERIFY_TOKEN = "truong2345"
-# PAGE_ACCESS_TOKEN = "EAALivdTNeRgBAD2kXcR9pniggNuDVCCOmBOVF8pzgJaXF4ZCxC7MJYQ1ECWyKlH9fb0PYza4ekg9MSmFNsDRvhtEgc4IEjq86ooXnvyGThlL41dCMEleHRrtcX0OP6FLfzmkN9FxfIOdMa9xpF23JdX6RbRnRwltAlZCpe9kzmPq8lTW01"
-# openai.api_key = "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"
-# OPENAI_TEXT_MESSAGE_URL = "https://api.openai.com/v1/chat/completions"
-# GRAPH_API = "https://graph.facebook.com/v17.0"
-# APP_ID = "103418016136773"
-
 openai_request_headers = {
     "Content-Type": "application/json",
     "Authorization": f"Bearer {openai.api_key}"
