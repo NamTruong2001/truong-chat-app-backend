@@ -22,3 +22,8 @@ class UserLoginRequest(BaseModel):
 class UserForJwtEncode(BaseModel):
     id: int
     username: str
+
+
+class UserSignUp(User):
+    pass
+

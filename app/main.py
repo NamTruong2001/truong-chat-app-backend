@@ -12,12 +12,14 @@ from schemas import Message, MessageType, PersonalMessage, ChatRoomMessage, Crea
     JoinChatroomRequest, UserLoginRequest
 from service.connection_manager import ConnectionManager
 from sqlalchemy.orm import Session
-from service.auth import auth_login
-from fastapi.security import OAuth2PasswordBearer
 from service.auth import get_current_user, validate_websocket
+from routers import auth_router, chat_ws_router, user_router
 import random
 
 app = FastAPI()
+app.include_router(auth_router)
+app.include_router(chat_ws_router)
+app.include_router(user_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -90,39 +92,6 @@ manager = ConnectionManager()
 #     requests.post(url=f"{GRAPH_API}/{APP_ID}/messages?access_token={PAGE_ACCESS_TOKEN}", json=page_response)
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-
-@app.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: str):
-    try:
-        if not validate_websocket(client_id=client_id, token=websocket.headers.get("x-custom-header")):
-            await websocket.accept()
-            await websocket.send_text(data="Validation failed")
-            await websocket.close()
-        else:
-            await manager.connect(websocket=websocket, client_name=client_id)
-            while True:
-                json_payload = await websocket.receive_json()
-                message = Message(**json_payload)
-                print(message.dict())
-                if message.type == MessageType.personal:
-                    personal_message = PersonalMessage(**json_payload)
-                    await manager.send_personal_message(message=personal_message)
-                elif message.type == MessageType.broadcast:
-                    print(f"{message.sender_id} broadcast a message")
-                    brdcast_message = Message(**json_payload)
-                    await manager.broadcast(message=brdcast_message)
-                elif message.type == MessageType.chatroom:
-                    chatroom_message = ChatRoomMessage(**json_payload)
-                    print(f"{message.sender_id} send message to {chatroom_message.chatroom_id}")
-                    await manager.send_to_chatroom(chatroom_message=chatroom_message)
-
-    except WebSocketDisconnect as e:
-        print(f"{client_id} disconnected")
-        manager.disconnect(user_id=client_id)
-
-
 async def send_random_numbers():
     while True:
         number = random.randint(1000, 100000)
@@ -138,19 +107,6 @@ async def startup():
 
 app.add_event_handler("startup", startup)
 
-@app.post("/token")
-async def login(user_login_request: UserLoginRequest, db: Session = Depends(get_db)):
-    return auth_login(user_login_request, db)
-
-
-@app.get("/user/me")
-async def get_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)):
-    return get_current_user(token=token)
-
-
-@app.get("/get-users")
-async def get_all_user(db: Session = Depends(get_db)):
-    return db.query(UserModel).all()
 
 
 @app.post("/create-room", status_code=200)
@@ -167,9 +123,6 @@ async def join_chatroom(req: JoinChatroomRequest):
 async def check_all():
     return list(manager.active_connections.keys())
 
-@app.post("sign-up")
-async def sighup():
-    pass
 
 
 # @app.get("/test")

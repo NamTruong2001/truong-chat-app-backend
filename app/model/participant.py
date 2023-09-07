@@ -4,7 +4,9 @@ from db.database import Base
 from enums import ConversationRole
 
 class ParticipantModel(Base):
-    id = Column(Integer)
+    __tablename__ = "participants"
+
+    id = Column(Integer, primary_key=True, index=True)
     conversation_id = Column(Integer, ForeignKey("conversation.id"))
     users_id = Column(Integer, ForeignKey("users.id"))
     type = Column(Enum(ConversationRole))

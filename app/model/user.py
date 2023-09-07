@@ -4,7 +4,7 @@ from db.database import Base
 
 
 class UserModel(Base):
-    __tablename__ = "user"
+    __tablename__ = "users"
 
     id = Column(BigInteger, primary_key=True, index=True)
     username = Column(String)
