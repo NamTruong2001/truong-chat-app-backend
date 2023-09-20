@@ -12,9 +12,12 @@ class UserModel(Base):
     first_name = Column(String)
     last_name = Column(String)
     email = Column(String)
-    is_active = Column(Boolean)
+    is_active = Column(Boolean, default=False)
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 

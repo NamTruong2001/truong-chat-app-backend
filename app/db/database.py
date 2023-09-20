@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 
 db_config = {
     "user": "root",
-    "password": "khanhbeo",
+    "password": "truongIt1110$",
     "host": "localhost",
     "port": "3306",
     "database": "truong_chat_app"

@@ -1,7 +1,8 @@
-from sqlalchemy import Column, String, BigInteger, ForeignKey, DateTime, Integer
+from sqlalchemy import Column, String, BigInteger, ForeignKey, DateTime, Integer, desc, Enum
 from sqlalchemy.orm import Mapped, relationship
 from db.database import Base
 from typing import List
+from enums import ConversationTypeEnum
 
 
 class ConversationModel(Base):
@@ -13,7 +14,12 @@ class ConversationModel(Base):
     updated_at = Column(DateTime)
     deleted_at = Column(DateTime)
     creator_id = Column(Integer, ForeignKey("users.id"))
+    type = Column(Enum(ConversationTypeEnum))
 
     creator: Mapped["UserModel"] = relationship()
-    messages: Mapped[List["MessageModel"]] = relationship(back_populates="conversation")
+    messages: Mapped[list["MessageModel"]] = relationship(back_populates="conversation",
+                                                          order_by="desc(MessageModel.created_at)")
     participants: Mapped[List["ParticipantModel"]] = relationship(back_populates="conversation")
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}

@@ -1,12 +1,15 @@
-from typing import Annotated
+from typing import Annotated, Union
 
 import jwt
 from fastapi import Depends, HTTPException
-from fastapi.params import Path
+from fastapi.params import Cookie, Query
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from starlette.websockets import WebSocket
+
+from db import get_db
 from model import UserModel
-from schemas import UserLoginResponse, UserLoginRequest, UserForJwtEncode
+from schemas import UserInformationResponse, UserLoginRequest, UserForJwtEncode
 
 secret_key = "truong"
 algorithm = "HS512"
@@ -14,25 +17,13 @@ algorithm = "HS512"
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-def get_current_user(token: str, db: Session):
+def get_current_user_with_db_session(db: Annotated[Session, Depends(get_db)],
+                                     token: Annotated[str, Depends(oauth2_scheme)]) -> (UserModel, Session):
     payload = decode_token(token)
     user = db.query(UserModel).filter(UserModel.id == payload["id"]).first()
-    return UserLoginResponse(id=user.id, username=user.username)
-
-
-def authenticate_user(client_name: Annotated[str, Path(alias="client_name")],
-                      token: Annotated[str, Depends(oauth2_scheme)] = None) -> str:
-    print(client_name)
-    print(token)
-    try:
-        payload = decode_token(token)
-        user = UserLoginResponse(id=payload["id"], username=payload["username"])
-        if user.username == client_name:
-            return user.username
-        else:
-            raise HTTPException
-    except Exception:
-        raise HTTPException(status_code=401, detail="Authen error")
+    if user is None:
+        raise HTTPException(detail="Unauthorized", status_code=401)
+    return user, db
 
 
 def decode_token(token) -> dict:
@@ -58,7 +49,20 @@ def auth_login(user_login: UserLoginRequest, db: Session):
     return generate_jwt_token(user_db=user_db)
 
 
-def validate_websocket(client_id: str, token: str) -> bool:
-    if token and client_id == decode_token(token)["username"]:
+def validate_websocket(client_id: int, token: str) -> bool:
+    if token and client_id == decode_token(token)["id"]:
         return True
     return False
+
+
+async def authenticate_ws_by_token(
+        websocket: WebSocket,
+        token: Annotated[Union[str, None], Cookie()] = None,
+        client_id: Annotated[Union[int, None], Query()] = None,
+):
+    if not validate_websocket(client_id=client_id, token=token):
+        await websocket.accept()
+        await websocket.send_text(data="Validation failed")
+        await websocket.close()
+        return None
+    return client_id

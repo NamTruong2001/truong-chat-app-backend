@@ -1,5 +1,6 @@
 from enum import Enum
 
-class MessageEnum(Enum):
-    IMAGE = "image"
-    VIDEO = "video"
+class MessageEnum(str, Enum):
+    image = "image"
+    video = "video"
+    text = "text"

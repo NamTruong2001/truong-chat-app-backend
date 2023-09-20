@@ -1,81 +1,53 @@
-from typing import Annotated, Union
+from typing import Annotated
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from fastapi.params import Cookie, Query, Depends
-from schemas.chat import MessageType
-from service import validate_websocket
-from schemas import Message, PersonalMessage, ChatRoomMessage
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from sqlalchemy.orm import Session
+
+from db import get_db
+from service import validate_websocket, send_message, authenticate_ws_by_token
+from schemas import Message
 from dependencies import manager
 
 chat_ws_router = APIRouter()
+db: Session = next(get_db())
 
 
-async def get_cookie_or_token(
-        websocket: WebSocket,
-        token: Annotated[Union[str, None], Cookie()] = None,
-        client_id: Annotated[Union[str, None], Query()] = None,
-):
-    if not validate_websocket(client_id=client_id, token=token):
-        await websocket.accept()
-        await websocket.send_text(data="Validation failed")
-        await websocket.close()
-        return None
-    return client_id
-
-
-@chat_ws_router.websocket("/ws")
+@chat_ws_router.websocket("/ws2")
 async def websocket_endpoint(websocket: WebSocket,
-                             client_id: Annotated[str, Depends(get_cookie_or_token)]
+                             client_id: Annotated[int, Depends(authenticate_ws_by_token)]
                              ):
     try:
         if client_id is not None:
-            await manager.connect(websocket=websocket, client_name=client_id)
+            await manager.connect(websocket=websocket, client_id=client_id)
             while True:
                 json_payload = await websocket.receive_json()
-                message = Message(**json_payload)
-                print(message.dict())
-                if message.type == MessageType.personal:
-                    personal_message = PersonalMessage(**json_payload)
-                    await manager.send_personal_message(message=personal_message)
-                elif message.type == MessageType.broadcast:
-                    print(f"{message.sender_id} broadcast a message")
-                    brdcast_message = Message(**json_payload)
-                    await manager.broadcast(message=brdcast_message)
-                elif message.type == MessageType.chatroom:
-                    chatroom_message = ChatRoomMessage(**json_payload)
-                    print(f"{message.sender_id} send message to {chatroom_message.chatroom_id}")
-                    await manager.send_to_chatroom(chatroom_message=chatroom_message)
+                message = Message(message=json_payload["message"],
+                                  sender_id=client_id,
+                                  message_type=json_payload["message_type"],
+                                  conversation_id=json_payload["conversation_id"])
+                conversation_user_ids, message_response = send_message(message=message, session=db)
+                await manager.send_message(message=message_response, sent_to=conversation_user_ids)
 
     except WebSocketDisconnect as e:
         print(f"{client_id} disconnected")
         manager.disconnect(user_id=client_id)
 
 
-@chat_ws_router.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: str):
-    try:
-        if not validate_websocket(client_id=client_id, token=websocket.headers.get("x-custom-header")):
-            await websocket.accept()
-            await websocket.send_text(data="Validation failed")
-            await websocket.close()
-        else:
-            await manager.connect(websocket=websocket, client_name=client_id)
-            while True:
-                json_payload = await websocket.receive_json()
-                message = Message(**json_payload)
-                print(message.dict())
-                if message.type == MessageType.personal:
-                    personal_message = PersonalMessage(**json_payload)
-                    await manager.send_personal_message(message=personal_message)
-                elif message.type == MessageType.broadcast:
-                    print(f"{message.sender_id} broadcast a message")
-                    brdcast_message = Message(**json_payload)
-                    await manager.broadcast(message=brdcast_message)
-                elif message.type == MessageType.chatroom:
-                    chatroom_message = ChatRoomMessage(**json_payload)
-                    print(f"{message.sender_id} send message to {chatroom_message.chatroom_id}")
-                    await manager.send_to_chatroom(chatroom_message=chatroom_message)
-
-    except WebSocketDisconnect as e:
-        print(f"{client_id} disconnected")
-        manager.disconnect(user_id=client_id)
+# @chat_ws_router.websocket("/ws/{client_id}")
+# async def websocket_endpoint(websocket: WebSocket, client_id: int):
+#     try:
+#         if not validate_websocket(client_id=client_id, token=websocket.headers.get("x-custom-header")):
+#             await websocket.accept()
+#             await websocket.send_text(data="Validation failed")
+#             await websocket.close()
+#         else:
+#             await manager.connect(websocket=websocket, client_id=client_id)
+#             while True:
+#                 json_payload = await websocket.receive_json()
+#                 message = Message(**json_payload)
+#                 conversation_user_ids, message_response = send_message(message=message, session=db)
+#                 await manager.send_message(message=message_response, sent_to=conversation_user_ids)
+#
+#     except WebSocketDisconnect as e:
+#         print(f"{client_id} disconnected")
+#         manager.disconnect(user_id=client_id)
