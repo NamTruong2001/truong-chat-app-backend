@@ -13,10 +13,15 @@ class Message(BaseModel):
         use_enum_value = True
 
 
-class CreateMessage(Message):
+class MessageCreate(Message):
     pass
 
 
 class MessageResponse(Message):
     id: int
     created_at: datetime
+
+
+class MessageSentTo(BaseModel):
+    message: Message
+    sent_to_user_ids: list[int]

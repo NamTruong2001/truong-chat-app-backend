@@ -1,3 +1,4 @@
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
@@ -12,42 +13,24 @@ chat_ws_router = APIRouter()
 db: Session = next(get_db())
 
 
-@chat_ws_router.websocket("/ws2")
+@chat_ws_router.websocket("/ws/chat")
 async def websocket_endpoint(websocket: WebSocket,
                              client_id: Annotated[int, Depends(authenticate_ws_by_token)]
                              ):
+    connection_uuid = str(uuid.uuid4())
     try:
         if client_id is not None:
-            await manager.connect(websocket=websocket, client_id=client_id)
+            await manager.connect(websocket=websocket, connection_id=connection_uuid, client_id=client_id)
             while True:
                 json_payload = await websocket.receive_json()
                 message = Message(message=json_payload["message"],
                                   sender_id=client_id,
                                   message_type=json_payload["message_type"],
                                   conversation_id=json_payload["conversation_id"])
-                conversation_user_ids, message_response = send_message(message=message, session=db)
-                await manager.send_message(message=message_response, sent_to=conversation_user_ids)
+                message_response = await send_message(message=message, session=db)
+                await manager.send_message(message=message_response.message, sent_to=message_response.sent_to_user_ids)
 
     except WebSocketDisconnect as e:
         print(f"{client_id} disconnected")
-        manager.disconnect(user_id=client_id)
+        manager.disconnect(user_id=client_id, connection_id=connection_uuid)
 
-
-# @chat_ws_router.websocket("/ws/{client_id}")
-# async def websocket_endpoint(websocket: WebSocket, client_id: int):
-#     try:
-#         if not validate_websocket(client_id=client_id, token=websocket.headers.get("x-custom-header")):
-#             await websocket.accept()
-#             await websocket.send_text(data="Validation failed")
-#             await websocket.close()
-#         else:
-#             await manager.connect(websocket=websocket, client_id=client_id)
-#             while True:
-#                 json_payload = await websocket.receive_json()
-#                 message = Message(**json_payload)
-#                 conversation_user_ids, message_response = send_message(message=message, session=db)
-#                 await manager.send_message(message=message_response, sent_to=conversation_user_ids)
-#
-#     except WebSocketDisconnect as e:
-#         print(f"{client_id} disconnected")
-#         manager.disconnect(user_id=client_id)

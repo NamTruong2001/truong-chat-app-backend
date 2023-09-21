@@ -4,6 +4,7 @@ import jwt
 from fastapi import Depends, HTTPException
 from fastapi.params import Cookie, Query
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 from starlette.websockets import WebSocket
 
@@ -17,13 +18,17 @@ algorithm = "HS512"
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-def get_current_user_with_db_session(db: Annotated[Session, Depends(get_db)],
-                                     token: Annotated[str, Depends(oauth2_scheme)]) -> (UserModel, Session):
-    payload = decode_token(token)
-    user = db.query(UserModel).filter(UserModel.id == payload["id"]).first()
-    if user is None:
-        raise HTTPException(detail="Unauthorized", status_code=401)
-    return user, db
+def get_current_user_with_db_session(session: Annotated[Session, Depends(get_db)],
+                                     token: Annotated[str, Depends(oauth2_scheme)]) -> tuple[UserModel, Session]:
+    try:
+        payload = decode_token(token)
+        user = session.query(UserModel).filter(UserModel.id == payload["id"]).one()
+        return user, session
+    except NoResultFound:
+        raise HTTPException(detail="User not found", status_code=400)
+    finally:
+        session.close()
+
 
 
 def decode_token(token) -> dict:
