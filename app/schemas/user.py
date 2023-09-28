@@ -22,6 +22,10 @@ class UserForJwtEncode(BaseModel):
     username: str
 
 
+class DecodedJwtUser(BaseModel):
+    id: int
+    username: str
+
+
 class UserSignUp(User):
     password: str
-

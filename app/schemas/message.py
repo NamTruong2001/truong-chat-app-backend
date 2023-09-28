@@ -1,10 +1,12 @@
 from datetime import datetime
+from typing import Union
+
 from enums import MessageEnum
 from pydantic import BaseModel
 
 
 class Message(BaseModel):
-    sender_id: int
+    sender_id: Union[int, None]
     message: str
     message_type: MessageEnum
     conversation_id: int
@@ -22,6 +24,14 @@ class MessageResponse(Message):
     created_at: datetime
 
 
+class SystemMessage(Message):
+    pass
+
+
+class UserJoinGroupMessage(SystemMessage):
+    join_user: list[dict]
+
+
 class MessageSentTo(BaseModel):
     message: Message
-    sent_to_user_ids: list[int]
+    conversation_id: int
