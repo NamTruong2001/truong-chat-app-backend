@@ -5,6 +5,16 @@ from enums import MessageEnum
 from pydantic import BaseModel
 
 
+class Attachment(BaseModel):
+    file_name: str
+    original_file_name: str
+    azure_file_url: Union[str, None] = None
+
+
+class AttachmentDB(Attachment):
+    id: int
+    message_id: int
+
 class Message(BaseModel):
     sender_id: Union[int, None]
     message: str
@@ -19,9 +29,13 @@ class MessageCreate(Message):
     pass
 
 
-class MessageResponse(Message):
+class MessageDTO(Message):
     id: int
     created_at: datetime
+    attachment: Union[Attachment, None]
+
+    class Config:
+        from_attributes = True
 
 
 class SystemMessage(Message):
@@ -35,3 +49,4 @@ class UserJoinGroupMessage(SystemMessage):
 class MessageSentTo(BaseModel):
     message: Message
     conversation_id: int
+

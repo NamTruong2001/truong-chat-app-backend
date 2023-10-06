@@ -17,6 +17,7 @@ class MessageModel(Base):
     created_at: Mapped[datetime] = Column(DateTime)
 
     conversation: Mapped["ConversationModel"] = relationship(back_populates="messages")
+    attachment: Mapped["AttachmentModel"] = relationship(back_populates="message", lazy='subquery')
 
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}

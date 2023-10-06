@@ -14,7 +14,7 @@ class ParticipantModel(Base):
     updated_at = Column(DateTime)
 
     conversation: Mapped["ConversationModel"] = relationship(back_populates="participants")
-    user: Mapped["UserModel"] = relationship()
+    user: Mapped["UserModel"] = relationship(lazy="joined")
 
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}

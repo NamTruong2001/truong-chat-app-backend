@@ -1,21 +1,26 @@
 from datetime import datetime
-from typing import Optional
+from typing import Union
 
 from fastapi import HTTPException, Depends
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, joinedload, selectinload, with_loader_criteria, aliased, Query, defer, load_only, \
     contains_eager
 from sqlalchemy import func, and_, distinct, select
-
+from .redis_service import RedisSasBlobCache, ConversationCache
 from db import DBAdapter, get_db
 from enums import ConversationTypeEnum, UserConversationRole, MessageEnum
-from model import ParticipantModel, UserModel, ConversationModel, MessageModel
-from schemas import Message, MessageResponse, CreateGroupChat, MessageSentTo, SystemMessage
+from model import ParticipantModel, UserModel, ConversationModel, MessageModel, AttachmentModel
+from schemas import Message, MessageDTO, CreateGroupChat, MessageSentTo, SystemMessage, Attachment, AttachmentDB
+from validator.exceptions import ConversationNotFound
 
 
 class ConversationService:
-    def __init__(self, db_adapter: DBAdapter):
+    def __init__(self, db_adapter: DBAdapter,
+                 redis_sas_cache_service: RedisSasBlobCache,
+                 redis_message_cache: ConversationCache):
         self.db_adapter = db_adapter
+        self.redis_sas_cache_service = redis_sas_cache_service
+        self.redis_message_cache = redis_message_cache
 
     def find_conversation_by_two_username(self, username1: str, username2: str):
         with self.db_adapter.get_session() as session:
@@ -158,10 +163,7 @@ class ConversationService:
                 .outerjoin(MessageModel, MessageModel.created_at == subquery.c.latest_created_at)
                 .filter(ParticipantModel.user_id == current_user.id)
                 .options(contains_eager(ConversationModel.messages), selectinload(ConversationModel.participants)
-                         .selectinload(ParticipantModel.user).load_only(UserModel.id,
-                                                                        UserModel.username,
-                                                                        UserModel.first_name,
-                                                                        UserModel.last_name)
+                         .selectinload(ParticipantModel.user)
                          )
                 .execution_options(populate_existing=True)
             ).order_by(subquery.c.latest_created_at.desc())
@@ -195,37 +197,38 @@ class ConversationService:
             else:
                 raise HTTPException(detail="Conversation not found", status_code=400)
 
-    def persist_message(self, message: Message) -> MessageSentTo:
+    def persist_message(self, message: Message, attachment: Attachment = None) -> MessageSentTo:
         with self.db_adapter.get_session() as session:
-            new_message = MessageModel(**message.model_dump(), created_at=datetime.now())
-
+            new_message = MessageModel(**message.model_dump(),
+                                       created_at=datetime.now())
+            new_message.attachment = AttachmentModel(original_file_name=attachment.original_file_name,
+                                                     file_name=attachment.file_name,
+                                                     ) if attachment is not None else None
             if message.message_type != MessageEnum.system:
-                conversation = (
-                    session.query(ConversationModel)
-                    .filter(
-                        ConversationModel.participants.any(ParticipantModel.user_id == message.sender_id),
-                        ConversationModel.id == message.conversation_id
-                    )
-                    .one_or_none()
-                )
-            else:
-                conversation = (
-                    session.query(ConversationModel)
-                    .filter(ConversationModel.id == message.conversation_id)
-                    .one_or_none()
-                )
-            if conversation is None:
-                raise HTTPException(detail="Conversation doesn't exist", status_code=400)
+                try:
+                    is_in = self.redis_message_cache.is_user_in_conversation(user_id=new_message.sender_id, conversation_id=new_message.conversation_id)
+                    if is_in is False:
+                        raise HTTPException(detail="You are not in the conversation", status_code=400)
+                except ConversationNotFound as e:
+                    raise HTTPException(detail=e.message, status_code=400)
 
-            conversation.messages.append(new_message)
-            session.add(conversation)
+            session.add(new_message)
 
             session.flush()
             session.commit()
-            # db_message: MessageModel = session.get(MessageModel, new_message.id)
 
-            message_response = MessageResponse(
-                **new_message.as_dict()
+            attachment_dto: Union[AttachmentDB, None] = None
+
+            if new_message.attachment is not None:
+                attachment_db = new_message.attachment
+                attachment_dto = AttachmentDB(id=attachment_db.id,
+                                              message_id=attachment_db.message_id,
+                                              file_name= attachment_db.file_name,
+                                              original_file_name=attachment_db.original_file_name,
+                                              azure_file_url=self.redis_sas_cache_service.get(attachment_db.file_name))
+
+            message_response = MessageDTO(
+                **new_message.as_dict(),
+                attachment=attachment_dto
             )
-            # session.commit()
-            return MessageSentTo(conversation_id=conversation.id, message=message_response)
+            return MessageSentTo(conversation_id=new_message.conversation_id, message=message_response)

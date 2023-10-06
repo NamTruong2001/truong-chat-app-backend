@@ -1,27 +1,41 @@
-from fastapi import APIRouter, Depends, UploadFile, HTTPException
-from dependencies import auth_service
+from typing import Annotated
+
+from global_variables import AZURE_BLOB_STORAGE_URL, azure_container_name
+from fastapi import APIRouter, Depends, UploadFile, HTTPException, File, Form
+from fastapi.encoders import jsonable_encoder
+from fastapi.params import Query
+from azure_service import azure_blob_storage_service
+from dependencies import auth_service, conversation_service, sio, redis_blob_cache
+from schemas import Message, Attachment
 
 file_router = APIRouter()
-allowed_images_type = ["image/png", "image/gif", "image/jpeg", "image/jpg"]
-allowed_video_type = ["video/mp4"]
-all_allowed_file_types = []
-all_allowed_file_types.extend(allowed_images_type)
-all_allowed_file_types.extend(allowed_video_type)
 
 
-@file_router.post(path="/upload")
-async def upload_file(files: list[UploadFile]):
-    for file in files:
-        # Get the file size (in bytes)
-        file.file.seek(0, 2)
-        file_size = file.file.tell()
-        await file.seek(0)
+@file_router.post(path="/upload-to-conversation")
+async def upload_file_to_conversation(file: Annotated[UploadFile, File()],
+                                      conversation_id: Annotated[str, Form()],
+                                      caption: Annotated[str, Form()],
+                                      current_user=Depends(auth_service.get_current_user)):
+    (file_type,
+     uuid_filename,
+     original_file_name) = await azure_blob_storage_service.upload_blob_from_upload_file(file=file)
+    attachment = Attachment(file_name=uuid_filename,
+                            original_file_name=original_file_name)
+    message = Message(sender_id=current_user.id,
+                            conversation_id=conversation_id,
+                            message_type=file_type,
+                            message=caption)
 
-        if file_size > 10 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="File too large, must be less than 10Mb")
+    message_sent_to = conversation_service.persist_message(message=message, attachment=attachment)
+    await sio.emit(event="message", room=message_sent_to.conversation_id,
+                   data=jsonable_encoder(message_sent_to.message.model_dump()))
 
-        content_type = file.content_type
-        if content_type not in all_allowed_file_types:
-            raise HTTPException(status_code=400, detail="Invalid file type")
 
     return "Ok"
+
+
+@file_router.get(path="/g")
+async def get_file_sas(file_name = Query(), current_user=Depends(auth_service.get_current_user)):
+    return {"url": f"{redis_blob_cache.get(blob_name=file_name)}"}
+
+

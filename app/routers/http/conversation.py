@@ -3,8 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from fastapi.params import Query
 from fastapi.encoders import jsonable_encoder
-from model import UserModel
-from schemas import CreateGroupChat, AddGroupMember, MessageResponse, MessageSentTo
+from schemas import CreateGroupChat, AddGroupMember, MessageDTO, MessageSentTo
 from dependencies import auth_service, conversation_service, sio
 
 messenger_router = APIRouter()

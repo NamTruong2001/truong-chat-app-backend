@@ -6,7 +6,6 @@ from dependencies import auth_service
 
 auth_router = APIRouter()
 
-
 @auth_router.post("/token", status_code=200)
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     user_login_request = UserLoginRequest(username=form_data.username, password=form_data.password)
