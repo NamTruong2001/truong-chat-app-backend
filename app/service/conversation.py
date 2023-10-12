@@ -13,7 +13,7 @@ from sqlalchemy import func, and_, distinct, select
 from .redis_service import RedisSasBlobCache, ConversationCache
 from db import MysqlDBAdapter
 from enums import ConversationTypeEnum, UserConversationRole, MessageEnum
-from model import ParticipantModel, UserModel, ConversationModel, MessageModel, AttachmentModel
+from model import ParticipantModel, UserModel, ConversationModel
 from schemas import Message, MessageDTO, CreateGroupChat, MessageSentTo, SystemMessage, Attachment, AttachmentDB, \
     ConversationDTO
 from validator.exceptions import ConversationNotFound
