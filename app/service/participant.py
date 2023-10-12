@@ -1,12 +1,12 @@
 from sqlalchemy.orm import contains_eager, joinedload
 
-from db import DBAdapter
+from db import MysqlDBAdapter
 from model import UserModel, ConversationModel, ParticipantModel
 from enums import ConversationTypeEnum
 
 
 class ParticipantService:
-    def __init__(self, db_adapter: DBAdapter):
+    def __init__(self, db_adapter: MysqlDBAdapter):
         self.db_adapter = db_adapter
 
     def get_other_person_in_private_conversation(self, current_user: UserModel):

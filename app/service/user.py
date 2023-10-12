@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from db import DBAdapter
+from db import MysqlDBAdapter
 from schemas import UserSignUp, UserInformationResponse
 from sqlalchemy.orm import Session
 from fastapi.exceptions import HTTPException
@@ -8,7 +8,7 @@ from model import UserModel
 
 
 class UserService:
-    def __init__(self, db_adapter: DBAdapter):
+    def __init__(self, db_adapter: MysqlDBAdapter):
         self.db_adapter = db_adapter
 
     def signup_new(self, signup: UserSignUp):

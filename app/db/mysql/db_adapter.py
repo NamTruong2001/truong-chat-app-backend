@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from .db_config import SessionLocal
 
 
-class DBAdapter:
+class MysqlDBAdapter:
     @contextmanager
     def get_session(self) -> Session:
         session = SessionLocal()

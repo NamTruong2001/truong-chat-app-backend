@@ -1,6 +1,6 @@
-from sqlalchemy import Column, String, BigInteger, ForeignKey, DateTime, Integer, desc, Enum
+from sqlalchemy import Column, String, BigInteger, ForeignKey, DateTime, Integer, Enum
 from sqlalchemy.orm import Mapped, relationship
-from db.db_config import Base
+from db import Base
 from typing import List
 from enums import ConversationTypeEnum
 
@@ -16,10 +16,10 @@ class ConversationModel(Base):
     creator_id = Column(Integer, ForeignKey("users.id"))
     type = Column(Enum(ConversationTypeEnum))
 
-    creator: Mapped["UserModel"] = relationship()
+    creator: Mapped["UserModel"] = relationship(lazy="joined")
     messages: Mapped[list["MessageModel"]] = relationship(back_populates="conversation",
                                                           order_by="desc(MessageModel.created_at)")
-    participants: Mapped[List["ParticipantModel"]] = relationship(back_populates="conversation")
+    participants: Mapped[List["ParticipantModel"]] = relationship(back_populates="conversation", lazy="selectin")
 
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}

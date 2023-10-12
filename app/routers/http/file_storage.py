@@ -6,7 +6,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.params import Query
 from azure_service import azure_blob_storage_service
 from dependencies import auth_service, conversation_service, sio, redis_blob_cache
-from schemas import Message, Attachment
+from schemas import MessageDTO, Attachment, Message
 
 file_router = APIRouter()
 
@@ -22,9 +22,9 @@ async def upload_file_to_conversation(file: Annotated[UploadFile, File()],
     attachment = Attachment(file_name=uuid_filename,
                             original_file_name=original_file_name)
     message = Message(sender_id=current_user.id,
-                            conversation_id=conversation_id,
-                            message_type=file_type,
-                            message=caption)
+                         conversation_id=conversation_id,
+                         message_type=file_type,
+                         message=caption)
 
     message_sent_to = conversation_service.persist_message(message=message, attachment=attachment)
     await sio.emit(event="message", room=message_sent_to.conversation_id,

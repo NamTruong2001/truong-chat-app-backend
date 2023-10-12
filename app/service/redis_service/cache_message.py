@@ -2,13 +2,13 @@ from typing import Union
 from model import ParticipantModel, ConversationModel
 from redis import Redis
 from sqlalchemy.orm import selectinload
-from db import DBAdapter
+from db import MysqlDBAdapter
 from sqlalchemy.exc import NoResultFound
 from validator.exceptions import ConversationNotFound
 
 
 class ConversationCache:
-    def __init__(self, db_adapter: DBAdapter, redis_client: Redis):
+    def __init__(self, db_adapter: MysqlDBAdapter, redis_client: Redis):
         self.db_adapter = db_adapter
         self.rc = redis_client
         self.conversation_users_key_template = "conversation:{}:users"

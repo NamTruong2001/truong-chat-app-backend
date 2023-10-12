@@ -1,6 +1,6 @@
-from sqlalchemy import Column, String, BigInteger, Boolean, DateTime
+from sqlalchemy import String, BigInteger, Boolean, DateTime
 from sqlalchemy.orm import mapped_column
-from db.db_config import Base
+from db import Base
 
 
 class UserModel(Base):

@@ -3,11 +3,15 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path="../.env")
 
-DB_USER = os.environ["DB_USER"]
-DB_NAME = os.environ["DB_NAME"]
-DB_PASSWORD = os.environ["DB_PASSWORD"]
-DB_HOST = os.environ["DB_HOST"]
-DB_PORT = os.environ["DB_PORT"]
+MYSQL_DB_USER = os.environ["MYSQL_DB_USER"]
+MYSQL_DB_NAME = os.environ["MYSQL_DB_NAME"]
+MYSQL_DB_PASSWORD = os.environ["MYSQL_DB_PASSWORD"]
+MYSQL_DB_HOST = os.environ["MYSQL_DB_HOST"]
+MYSQL_DB_PORT = os.environ["MYSQL_DB_PORT"]
+MONGO_USER = os.environ["MONGO_USER"]
+MONGO_PASSWORD = os.environ["MONGO_PASSWORD"]
+MONGO_PORT = os.environ["MONGO_PORT"]
+MONGO_HOST = os.environ["MONGO_HOST"]
 AZURE_BLOB_STORAGE_URL=os.environ["AZURE_BLOB_ACC_URL"]
 azure_container_name = os.environ["AZURE_BLOB_CONTAINER"]
 azure_storage_account_name = os.environ["AZURE_ACCOUNT_NAME"]

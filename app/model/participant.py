@@ -1,6 +1,6 @@
-from sqlalchemy import Column, String, BigInteger, ForeignKey, DateTime, Integer, Enum
+from sqlalchemy import Column, ForeignKey, DateTime, Integer, Enum
 from sqlalchemy.orm import Mapped, relationship
-from db.db_config import Base
+from db import Base
 from enums import UserConversationRole
 
 class ParticipantModel(Base):

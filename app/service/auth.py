@@ -4,7 +4,7 @@ import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.exc import NoResultFound
-from db import DBAdapter
+from db import MysqlDBAdapter
 from model import UserModel
 from schemas import UserInformationResponse, UserLoginRequest, UserForJwtEncode, DecodedJwtUser
 from global_variables import JWT_ALGORITHM, JWT_SECRET
@@ -12,7 +12,7 @@ from global_variables import JWT_ALGORITHM, JWT_SECRET
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 class AuthService:
-    def __init__(self, db_adapter: DBAdapter):
+    def __init__(self, db_adapter: MysqlDBAdapter):
         self.db_adapter = db_adapter
 
     def get_current_user(self, token: Annotated[str, Depends(oauth2_scheme)]) -> UserModel:

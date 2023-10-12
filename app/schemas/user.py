@@ -29,3 +29,6 @@ class DecodedJwtUser(BaseModel):
 
 class UserSignUp(User):
     password: str
+
+class UserDTO(User):
+    id: int

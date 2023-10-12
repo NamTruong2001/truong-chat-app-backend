@@ -1,10 +1,11 @@
 import socketio
+from fastapi import HTTPException
 from pydantic import ValidationError
 from socketio import Server
 from socketio.exceptions import ConnectionRefusedError
 from fastapi.encoders import jsonable_encoder
 from model import UserModel, ParticipantModel
-from schemas import MessageCreate, MessageSentTo
+from schemas import Message, MessageSentTo
 from service import AuthService, ConversationService, RedisSocketIOManager, ParticipantService
 from global_variables import REDIS_PASSWORD, REDIS_PORT, REDIS_HOST
 
@@ -22,17 +23,17 @@ def ini_socketio(socketio_manager: RedisSocketIOManager,
             raise ConnectionRefusedError("Authentication failed")
         try:
             user_model = auth_service.authenticate_socketio_connection(environ["HTTP_TOKEN"])
-            user_conversations: list[UserModel] = conversation_service.get_user_conversations(current_user=user_model)
+            conversation_ids: list[int] = conversation_service.get_all_user_conversation_ids(current_user=user_model)
             participant_in_private_chat: list[ParticipantModel] = participant_service.get_other_person_in_private_conversation(current_user=user_model)
             def get_user_online_status(participant_model: ParticipantModel):
                 return {
                     "user_id": participant_model.user_id,
                     "conversation_id": participant_model.conversation_id,
-                    "is_active": socketio_manager.is_user_online(user_id=participant_model.user_id)
+                    "online": socketio_manager.is_user_online(user_id=participant_model.user_id)
                 }
             online_status = map(get_user_online_status, participant_in_private_chat)
-            for con in user_conversations:
-                sio.enter_room(sid=sid, room=con.id)
+            for con_id in conversation_ids:
+                sio.enter_room(sid=sid, room=con_id)
             user_id = user_model.id
             await sio.save_session(sid, {"user_id": user_id})
             await sio.emit(event="presence",
@@ -41,11 +42,11 @@ def ini_socketio(socketio_manager: RedisSocketIOManager,
 
             if socketio_manager.get_number_of_user_connection(user_id=user_id) == 0:
                 socketio_manager.add_online_user_id(user_id=user_id)
-                for con in user_conversations:
+                for con_id in conversation_ids:
                     await sio.emit(event="presence",
-                                   room=con.id,
+                                   room=con_id,
                                    skip_sid=sid,
-                                   data={"conversation_id": con.id,
+                                   data={"conversation_id": con_id,
                                          "user": user_model.id,
                                          "is_online": True})
             socketio_manager.add_user_socketio_id_connection(user_id=user_id, sid=sid)
@@ -65,7 +66,7 @@ def ini_socketio(socketio_manager: RedisSocketIOManager,
                 {
                     "conversation_id": room,
                     "user": session["user_id"],
-                    "is_online": False
+                    "online": False
                 })
 
     @sio.event
@@ -76,7 +77,7 @@ def ini_socketio(socketio_manager: RedisSocketIOManager,
     async def message(sid, data):
         user_session = await sio.get_session(sid=sid)
         try:
-            smessage = MessageCreate(**data, sender_id=user_session["user_id"])
+            smessage = Message(**data, sender_id=user_session["user_id"])
             conversation_to_send: MessageSentTo = conversation_service.persist_message(message=smessage)
             await sio.emit("message", room=conversation_to_send.conversation_id,
                            data=jsonable_encoder(conversation_to_send.message.model_dump()))
@@ -85,5 +86,13 @@ def ini_socketio(socketio_manager: RedisSocketIOManager,
                            to=sid,
                            data={"error": {"message": "Message validation error",
                                            "details": ve.errors()}})
+        except HTTPException as he:
+            await sio.emit(
+                event="message",
+                to=sid,
+                data=he.detail
+            )
+        except Exception as e:
+            print(e)
 
     return sio

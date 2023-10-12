@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Union
+from typing import Union, TypedDict
 
 from enums import MessageEnum
 from pydantic import BaseModel
@@ -25,14 +25,10 @@ class Message(BaseModel):
         use_enum_value = True
 
 
-class MessageCreate(Message):
-    pass
-
-
 class MessageDTO(Message):
-    id: int
+    id: Union[str, None] = None
     created_at: datetime
-    attachment: Union[Attachment, None]
+    attachment: Union[Attachment, None] = None
 
     class Config:
         from_attributes = True
@@ -49,4 +45,5 @@ class UserJoinGroupMessage(SystemMessage):
 class MessageSentTo(BaseModel):
     message: Message
     conversation_id: int
+
 
