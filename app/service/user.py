@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from db import MysqlDBAdapter
-from schemas import UserSignUp, UserInformationResponse
-from sqlalchemy.orm import Session
 from fastapi.exceptions import HTTPException
+
+from db import MysqlDBAdapter
 from model import UserModel
+from schemas import UserSignUp, UserInformationResponse
 
 
 class UserService:

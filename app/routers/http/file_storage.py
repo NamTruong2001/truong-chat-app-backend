@@ -1,17 +1,17 @@
 from typing import Annotated
 
-from global_variables import AZURE_BLOB_STORAGE_URL, azure_container_name
-from fastapi import APIRouter, Depends, UploadFile, HTTPException, File, Form
+from fastapi import APIRouter, Depends, UploadFile, File, Form
 from fastapi.encoders import jsonable_encoder
 from fastapi.params import Query
+
 from azure_service import azure_blob_storage_service
 from dependencies import auth_service, conversation_service, sio, redis_blob_cache
-from schemas import MessageDTO, Attachment, Message
+from schemas import Attachment, Message
 
 file_router = APIRouter()
 
 
-@file_router.post(path="/upload-to-conversation")
+@file_router.post(path="/upload-file")
 async def upload_file_to_conversation(file: Annotated[UploadFile, File()],
                                       conversation_id: Annotated[str, Form()],
                                       caption: Annotated[str, Form()],

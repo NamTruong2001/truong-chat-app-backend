@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, BigInteger, ForeignKey, DateTime, Integer, Enum
-from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy.orm import Mapped, relationship, WriteOnlyMapped
 from db import Base
 from typing import List
 from enums import ConversationTypeEnum

@@ -19,6 +19,12 @@ class ConversationCache:
             self.cache_conversation_users(conversation_id, user_id)
         return bool(self.rc.sismember(key, user_id))
 
+    def add_member_to_conversation_cached(self, user_id: Union[int, str], conversation_id: Union[int, str]):
+        key = self.conversation_users_key_template.format(conversation_id)
+        if not self.is_conversation_cached(conversation_id):
+            self.cache_conversation_users(conversation_id, user_id)
+        self.rc.sadd(key, user_id)
+
     def is_conversation_cached(self, conversation_id: Union[int, str]) -> bool:
         key = self.conversation_users_key_template.format(conversation_id)
         return self.rc.exists(key)

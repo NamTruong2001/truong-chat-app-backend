@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Union, TypedDict
+from typing import Union, TypedDict, Any
 
 from enums import MessageEnum
 from pydantic import BaseModel
@@ -29,7 +29,7 @@ class MessageDTO(Message):
     id: Union[str, None] = None
     created_at: datetime
     attachment: Union[Attachment, None] = None
-
+    user: Any
     class Config:
         from_attributes = True
 

@@ -5,6 +5,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.exc import NoResultFound
 from db import MysqlDBAdapter
+from mapper import map_user
 from model import UserModel
 from schemas import UserInformationResponse, UserLoginRequest, UserForJwtEncode, DecodedJwtUser
 from global_variables import JWT_ALGORITHM, JWT_SECRET
@@ -39,14 +40,14 @@ class AuthService:
         user_jwt = UserForJwtEncode(id=user_db.id, username=user_db.username)
         encoded_token = jwt.encode(user_jwt.dict(), JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-        return {"token": encoded_token}
+        return encoded_token
 
     def auth_login(self, user_login: UserLoginRequest):
         with self.db_adapter.get_session() as session:
             user_db: UserModel = session.query(UserModel).filter(UserModel.username == user_login.username).first()
             if not user_db or user_db.password != user_login.password:
                 raise HTTPException(status_code=400, detail="Incorrect username or password")
-            return self.generate_jwt_token(user_db=user_db)
+            return {"token": self.generate_jwt_token(user_db=user_db), "user": map_user(user_db)}
 
     def get_user_token(self, token: str):
         with self.db_adapter.get_session() as session:
