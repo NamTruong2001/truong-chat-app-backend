@@ -3,15 +3,13 @@ from pydantic import BaseModel
 
 class User(BaseModel):
     username: str
-    password: str
     email: str
     first_name: str
     last_name: str
 
 
-class UserLoginResponse(BaseModel):
+class UserInformationResponse(User):
     id: int
-    username: str
 
 
 class UserLoginRequest(BaseModel):
@@ -24,6 +22,13 @@ class UserForJwtEncode(BaseModel):
     username: str
 
 
-class UserSignUp(User):
-    pass
+class DecodedJwtUser(BaseModel):
+    id: int
+    username: str
 
+
+class UserSignUp(User):
+    password: str
+
+class UserDTO(User):
+    id: int

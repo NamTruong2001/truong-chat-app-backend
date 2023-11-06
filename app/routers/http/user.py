@@ -1,27 +1,22 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from fastapi.security import OAuth2PasswordBearer
-from mysqlx import Session
-from model.user import UserModel
-from service import get_current_user, signup_new
-from db import get_db
-from schemas import UserSignUp
+from dependencies import auth_service, user_service, participant_service
+from schemas import UserSignUp, UserInformationResponse
 
 user_router = APIRouter()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-@user_router.get("/user/me")
-async def get_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)):
-    return get_current_user(token=token)
+@user_router.get("/user/me", response_model=UserInformationResponse)
+async def get_user(user=Depends(auth_service.get_current_user)):
+    return user_service.get_user_info(user)
 
-
-@user_router.get("/get-users")
-async def get_all_user(db: Session = Depends(get_db)):
-    return db.query(UserModel).all()
 
 @user_router.post("/signup")
-async def signup(sign_up: UserSignUp, db: Session = Depends(get_db)):
-    await signup_new(signup=sign_up, db=db)
+async def signup(sign_up: UserSignUp):
+    user_service.signup_new(signup=sign_up)
     return JSONResponse(status_code=200, content="Sign up success")
+
+@user_router.get("/test")
+async def test(current_user=Depends(auth_service.get_current_user)):
+    return participant_service.get_other_person_in_private_conversation(current_user=current_user)

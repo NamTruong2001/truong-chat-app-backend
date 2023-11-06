@@ -1,6 +1,8 @@
-from sqlalchemy import Column, String, BigInteger, ForeignKey, DateTime, Integer, Enum, Text
+from datetime import datetime
+
+from sqlalchemy import Column, BigInteger, ForeignKey, DateTime, Integer, Enum, Text
 from sqlalchemy.orm import Mapped, relationship
-from db.database import Base
+from db import Base
 from enums import MessageEnum
 
 
@@ -12,6 +14,11 @@ class MessageModel(Base):
     sender_id = Column(Integer, ForeignKey("users.id"))
     message_type = Column(Enum(MessageEnum))
     message = Column(Text)
-    created_at = Column(DateTime)
+    created_at: Mapped[datetime] = Column(DateTime)
 
     conversation: Mapped["ConversationModel"] = relationship(back_populates="messages")
+    attachment: Mapped["AttachmentModel"] = relationship(back_populates="message", lazy='subquery')
+    user: Mapped["UserModel"] = relationship(lazy="joined")
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}

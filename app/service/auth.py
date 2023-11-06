@@ -1,64 +1,63 @@
-from typing import Annotated
+from typing import Annotated, Union, Optional
 
 import jwt
 from fastapi import Depends, HTTPException
-from fastapi.params import Path
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
+from sqlalchemy.exc import NoResultFound
+from db import MysqlDBAdapter
+from mapper import map_user
 from model import UserModel
-from schemas import UserLoginResponse, UserLoginRequest, UserForJwtEncode
-
-secret_key = "truong"
-algorithm = "HS512"
+from schemas import UserInformationResponse, UserLoginRequest, UserForJwtEncode, DecodedJwtUser
+from global_variables import JWT_ALGORITHM, JWT_SECRET
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+class AuthService:
+    def __init__(self, db_adapter: MysqlDBAdapter):
+        self.db_adapter = db_adapter
 
-def get_current_user(token: str, db: Session):
-    payload = decode_token(token)
-    user = db.query(UserModel).filter(UserModel.id == payload["id"]).first()
-    return UserLoginResponse(id=user.id, username=user.username)
+    def get_current_user(self, token: Annotated[str, Depends(oauth2_scheme)]) -> UserModel:
+        with self.db_adapter.get_session() as session:
+            try:
+                decoded_token: DecodedJwtUser = self.decode_token(token)
+                user = session.query(UserModel).filter(UserModel.id == decoded_token.id).one()
+                return user
+            except NoResultFound:
+                raise HTTPException(detail="User not found", status_code=400)
+            except Exception as e:
+                print(e)
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid Token",
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
 
+    def decode_token(self, token) -> DecodedJwtUser:
+        decoded_token = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return DecodedJwtUser(id=decoded_token["id"], username=decoded_token["username"])
 
-def authenticate_user(client_name: Annotated[str, Path(alias="client_name")],
-                      token: Annotated[str, Depends(oauth2_scheme)] = None) -> str:
-    print(client_name)
-    print(token)
-    try:
-        payload = decode_token(token)
-        user = UserLoginResponse(id=payload["id"], username=payload["username"])
-        if user.username == client_name:
-            return user.username
-        else:
-            raise HTTPException
-    except Exception:
-        raise HTTPException(status_code=401, detail="Authen error")
+    def generate_jwt_token(self, user_db: UserModel):
+        user_jwt = UserForJwtEncode(id=user_db.id, username=user_db.username)
+        encoded_token = jwt.encode(user_jwt.dict(), JWT_SECRET, algorithm=JWT_ALGORITHM)
 
+        return encoded_token
 
-def decode_token(token) -> dict:
-    decoded_token = jwt.decode(token, secret_key, algorithms=[algorithm])
-    return decoded_token
+    def auth_login(self, user_login: UserLoginRequest):
+        with self.db_adapter.get_session() as session:
+            user_db: UserModel = session.query(UserModel).filter(UserModel.username == user_login.username).first()
+            if not user_db or user_db.password != user_login.password:
+                raise HTTPException(status_code=400, detail="Incorrect username or password")
+            return {"token": self.generate_jwt_token(user_db=user_db), "user": map_user(user_db)}
 
+    def get_user_token(self, token: str):
+        with self.db_adapter.get_session() as session:
+            decoded_token: DecodedJwtUser = self.decode_token(token)
+            user = session.query(UserModel).filter(UserModel.id == decoded_token.id).one()
+            return user
 
-def generate_jwt_token(user_db: UserModel):
-    user_jwt = UserForJwtEncode(id=user_db.id, username=user_db.username)
-    encoded_token = jwt.encode(user_jwt.dict(), secret_key, algorithm=algorithm)
-
-    return {"token": encoded_token}
-
-
-def auth_login(user_login: UserLoginRequest, db: Session):
-    user_db: UserModel = db.query(UserModel).filter(UserModel.username == user_login.username).first()
-    if not user_db:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-
-    if user_db.password != user_login.password:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-
-    return generate_jwt_token(user_db=user_db)
-
-
-def validate_websocket(client_id: str, token: str) -> bool:
-    if token and client_id == decode_token(token)["username"]:
-        return True
-    return False
+    def authenticate_socketio_connection(self, token: str) -> Optional[UserModel]:
+        try:
+            user = self.get_user_token(token=token)
+            return user
+        except:
+            return None
