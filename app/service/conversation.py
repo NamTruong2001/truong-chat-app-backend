@@ -390,4 +390,3 @@ class ConversationService:
                 .values(updated_at=time)
             )
             mysql_session.commit()
-

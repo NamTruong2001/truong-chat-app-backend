@@ -1,7 +1,10 @@
 import os
+import sys
+
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path="../.env")
+config_file = sys.argv[1] if len(sys.argv) > 1 else "local"
+load_dotenv(dotenv_path=f"../.{config_file}")
 
 MYSQL_DB_USER = os.environ["MYSQL_DB_USER"]
 MYSQL_DB_NAME = os.environ["MYSQL_DB_NAME"]

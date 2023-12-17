@@ -12,10 +12,15 @@ db_config = {
     "database": MYSQL_DB_NAME
 }
 
+ssl_ca = {
+    "ssl_ca": "DigiCertGlobalRootCA.crt.pem"
+}
+
 SQLALCHEMY_DATABASE_URL = f"mysql+mysqlconnector://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['database']}"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
+    connect_args=ssl_ca,
     # echo=True
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
