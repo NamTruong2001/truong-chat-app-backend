@@ -1,20 +1,18 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from config import get_settings
 
-from global_variables import MYSQL_DB_USER, MYSQL_DB_PASSWORD, MYSQL_DB_HOST, MYSQL_DB_PORT, MYSQL_DB_NAME
-
+settings = get_settings()
 db_config = {
-    "user": MYSQL_DB_USER,
-    "password": MYSQL_DB_PASSWORD,
-    "host": MYSQL_DB_HOST,
-    "port": MYSQL_DB_PORT,
-    "database": MYSQL_DB_NAME
+    "user": settings.mysql_db_user,
+    "password": settings.mysql_db_password,
+    "host": settings.mysql_db_host,
+    "port": settings.mysql_db_port,
+    "database": settings.mysql_db_name,
 }
 
-ssl_ca = {
-    "ssl_ca": "DigiCertGlobalRootCA.crt.pem"
-}
+ssl_ca = {"ssl_ca": "DigiCertGlobalRootCA.crt.pem"}
 
 SQLALCHEMY_DATABASE_URL = f"mysql+mysqlconnector://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['database']}"
 

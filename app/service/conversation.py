@@ -32,12 +32,12 @@ class ConversationService:
     def __init__(
         self,
         redis_sas_cache_service: RedisSasBlobCache,
-        mongo_db_client: MongoClient,
+        # mongo_db_client: MongoClient,
         redis_message_cache: ConversationCache,
         db_adapter: MysqlDBAdapter,
     ):
         self.db_adapter = db_adapter
-        self.mongo_db_client = mongo_db_client
+        # self.mongo_db_client = mongo_db_client
         self.redis_sas_cache_service = redis_sas_cache_service
         self.redis_message_cache = redis_message_cache
 

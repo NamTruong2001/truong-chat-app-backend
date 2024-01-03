@@ -4,13 +4,15 @@ import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.exc import NoResultFound
+
+from config import get_settings
 from db import MysqlDBAdapter
 from mapper import map_user
 from model import UserModel
 from schemas import UserInformationResponse, UserLoginRequest, UserForJwtEncode, DecodedJwtUser
-from global_variables import JWT_ALGORITHM, JWT_SECRET
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+settings = get_settings()
 
 class AuthService:
     def __init__(self, db_adapter: MysqlDBAdapter):
@@ -33,12 +35,12 @@ class AuthService:
                 )
 
     def decode_token(self, token) -> DecodedJwtUser:
-        decoded_token = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        decoded_token = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
         return DecodedJwtUser(id=decoded_token["id"], username=decoded_token["username"])
 
     def generate_jwt_token(self, user_db: UserModel):
         user_jwt = UserForJwtEncode(id=user_db.id, username=user_db.username)
-        encoded_token = jwt.encode(user_jwt.dict(), JWT_SECRET, algorithm=JWT_ALGORITHM)
+        encoded_token = jwt.encode(user_jwt.dict(), settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
         return encoded_token
 

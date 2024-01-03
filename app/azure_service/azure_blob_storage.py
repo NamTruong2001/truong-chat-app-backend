@@ -5,12 +5,12 @@ import pytz
 from azure.core.exceptions import ResourceExistsError
 from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions, generate_container_sas, \
     ContainerSasPermissions
+
+from config import get_settings
 from validator import validate_upload_file_to_azure_blob_service
 from fastapi import UploadFile, HTTPException
 
-from global_variables import azure_storage_account_name, azure_storage_account_key, azure_container_name, AZURE_BLOB_STORAGE_URL
-
-
+settings = get_settings()
 class AzureBlobStorageService:
     def __init__(self, blob_service_client: BlobServiceClient):
         self.blob_service_client = blob_service_client
@@ -23,7 +23,7 @@ class AzureBlobStorageService:
 
     async def upload_blob_from_upload_file(self,
                                            file: UploadFile,
-                                           container_name: str = azure_container_name) -> tuple[str, str, str]:
+                                           container_name: str = settings.azure_blob_container) -> tuple[str, str, str]:
         try:
             await validate_upload_file_to_azure_blob_service(file)
         except Exception as ie:
@@ -43,9 +43,9 @@ class AzureBlobStorageService:
 
     def get_blob_sas_read_permission_url(self,
                                          blob_name: str,
-                                         account_name=azure_storage_account_name,
-                                         account_key=azure_storage_account_key,
-                                         container_name=azure_container_name,
+                                         account_name=settings.azure_account_name,
+                                         account_key=settings.azure_storage_account_key,
+                                         container_name=settings.azure_blob_container,
                                          expire_time: int = 1
                                          ) -> str:
         vietnam_timezone = pytz.timezone('Asia/Ho_Chi_Minh')
@@ -64,12 +64,12 @@ class AzureBlobStorageService:
                                            start=start_time,
                                            expiry=expiry_time)
 
-        return f"{AZURE_BLOB_STORAGE_URL}/{container_name}/{blob_name}?{sas_blob_token}"
+        return f"{settings.azure_blob_acc_url}/{container_name}/{blob_name}?{sas_blob_token}"
 
     def get_container_sas_read_permisson_token(self,
-                                         account_name=azure_storage_account_name,
-                                         account_key=azure_storage_account_key,
-                                         container_name=azure_container_name,
+                                         account_name=settings.azure_account_name,
+                                         account_key=settings.azure_storage_account_key,
+                                         container_name=settings.azure_blob_container,
                                          expire_time: int = 1) -> str:
         vietnam_timezone = pytz.timezone('Asia/Ho_Chi_Minh')
         current_time_vietnam = datetime.now(tz=vietnam_timezone)

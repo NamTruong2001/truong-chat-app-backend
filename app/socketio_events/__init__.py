@@ -5,7 +5,7 @@ from pydantic import ValidationError
 from socketio import Server
 from socketio.exceptions import ConnectionRefusedError
 
-from global_variables import REDIS_PORT, REDIS_HOST
+from config import get_settings
 from model import ParticipantModel
 from schemas import Message, MessageSentTo
 from service import (
@@ -15,14 +15,14 @@ from service import (
     ParticipantService,
 )
 
-
+settings = get_settings()
 def ini_socketio(
     socketio_manager: RedisSocketIOManager,
     auth_service: AuthService,
     conversation_service: ConversationService,
     participant_service: ParticipantService,
 ) -> Server:
-    mgr = socketio.AsyncRedisManager(f"redis://{REDIS_HOST}:{REDIS_PORT}")
+    mgr = socketio.AsyncRedisManager(f"redis://{settings.redis_host}:{settings.redis_port}")
     sio = socketio.AsyncServer(
         client_manager=mgr, cors_allowed_origins="*", async_mode="asgi"
     )
