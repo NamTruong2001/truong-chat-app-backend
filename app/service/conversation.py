@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from fastapi import HTTPException
-from pymongo import MongoClient
 from sqlalchemy import func, update
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import (

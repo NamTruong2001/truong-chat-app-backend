@@ -1,4 +1,4 @@
-from sqlalchemy.orm import contains_eager, joinedload
+
 
 from db import MysqlDBAdapter
 from model import UserModel, ConversationModel, ParticipantModel

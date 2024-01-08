@@ -2,9 +2,6 @@ import sys
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
-
-config_file = sys.argv[1] if len(sys.argv) > 1 else "local"
-
 class Settings(BaseSettings):
     mysql_db_user: str
     mysql_db_name: str
@@ -25,8 +22,10 @@ class Settings(BaseSettings):
     redis_port: str
     redis_db: str
     redis_password: str
+    allowed_images_type: list[str] = ["image/png", "image/gif", "image/jpeg", "image/jpg"]
+    allowed_video_type: list[str] = ["video/mp4"]
 
-    model_config = SettingsConfigDict(env_file=f"../.{config_file}")
+    model_config = SettingsConfigDict(env_file=f"../.{sys.argv[1] if len(sys.argv) > 1 else 'local'}")
 
 
 @lru_cache()
