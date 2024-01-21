@@ -1,7 +1,8 @@
 from datetime import datetime
+from typing import Type
 
 from fastapi import HTTPException
-from sqlalchemy import func, update
+from sqlalchemy import func, update, delete
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import (
     joinedload,
@@ -22,6 +23,7 @@ from schemas import (
     SystemMessage,
     Attachment,
     ConversationDTO,
+    DeleteGroupMember,
 )
 from validator.exceptions import ConversationNotFound
 from .redis_service import RedisSasBlobCache, ConversationCache
@@ -159,6 +161,26 @@ class ConversationService:
                 return persisted_message
             except NoResultFound:
                 raise HTTPException(detail="Conversation not found", status_code=400)
+
+    def delete_users_from_group(
+        self, delete_members_request: DeleteGroupMember, current_user: UserModel
+    ):
+        with self.db_adapter.get_session() as session:
+            delete_stmt = delete(ParticipantModel).where(
+                ParticipantModel.user_id.in_(delete_members_request.member_ids),
+                ParticipantModel.conversation_id
+                == delete_members_request.conversation_id
+            )
+            result = session.execute(delete_stmt)
+
+            message = SystemMessage(
+                message_type=MessageEnum.system,
+                conversation_id=delete_members_request.conversation_id,
+                sender_id=None,
+                message=f"{current_user.first_name} {current_user.last_name} removed {len(delete_members_request.member_ids)} members from the group.",
+            )
+            persisted_message = self.persist_message(message=message)
+            return (delete_members_request, persisted_message)
 
     def find_or_create_private_conversation(self, creator: UserModel, user_id: int):
         with self.db_adapter.get_session() as session:

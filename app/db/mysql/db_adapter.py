@@ -4,6 +4,12 @@ from .db_config import SessionLocal
 
 
 class MysqlDBAdapter:
+    def get_session(self) -> Session:
+        pass
+
+
+
+class OneConnectionPerRequestMysqlDBAdapter(MysqlDBAdapter):
     @contextmanager
     def get_session(self) -> Session:
         session = SessionLocal()
@@ -14,3 +20,18 @@ class MysqlDBAdapter:
             raise
         finally:
             session.close()
+
+
+class OneConnectionOnlyMysqlDBAdapter(MysqlDBAdapter):
+    def __init__(self, session):
+        self.session = session
+
+    @contextmanager
+    def get_session(self) -> Session:
+        try:
+            yield self.session
+        except:
+            self.session.rollback()
+            raise
+        finally:
+            self.session.close()

@@ -31,7 +31,7 @@ async def upload_file_to_conversation(file: Annotated[UploadFile, File()],
                    data=jsonable_encoder(message_sent_to.message.model_dump()))
 
 
-    return "Ok"
+    return message
 
 
 @file_router.get(path="/g")

@@ -15,6 +15,11 @@ class AddGroupMember(BaseModel):
     member_ids: conlist(int, min_length=1)
     conversation_id: int
 
+
+class DeleteGroupMember(BaseModel):
+    member_ids: conlist(int, min_length=1)
+    conversation_id: int
+
 class ConversationDTO(BaseModel):
     id: Union[int, None] = None
     title: Union[str, None] = None

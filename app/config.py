@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     redis_port: str
     redis_db: str
     redis_password: str
+    redis_user: str
     allowed_images_type: list[str] = ["image/png", "image/gif", "image/jpeg", "image/jpg"]
     allowed_video_type: list[str] = ["video/mp4"]
 
